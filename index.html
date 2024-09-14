@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>1 point perspective draw</title>
+    <title>Draw Line with Ghost Effect</title>
     <style>
         body {
             margin: 0;
@@ -23,6 +23,7 @@
             width: 100%;
             height: 2px;
             background-color: #D3D3D3;
+            pointer-events: none;
         }
         .grey-dot {
             position: absolute;
@@ -33,17 +34,19 @@
             background-color: #D3D3D3;
             border-radius: 50%;
             transform: translate(-50%, -50%);
+            pointer-events: none;
         }
         canvas {
             position: absolute;
             top: 0;
             left: 0;
+            z-index: 1;
         }
         .controls {
             position: absolute;
             top: 10px;
             left: 10px;
-            z-index: 1;
+            z-index: 2;
         }
     </style>
 </head>
@@ -55,30 +58,78 @@
     </div>
 
     <div class="line-container">
-        <canvas id="drawCanvas"></canvas>
         <div class="grey-line"></div>
         <div class="grey-dot" id="greyDot"></div>
+        <canvas id="drawCanvas"></canvas>
     </div>
 
     <script>
+        // Move all variable declarations to the top
         const canvas = document.getElementById('drawCanvas');
         const ctx = canvas.getContext('2d');
         const ghostCheckbox = document.getElementById('ghostCheckbox');
         const greyDot = document.getElementById('greyDot');
 
-        const blackLines = []; // Store black lines
-        const undoStack = []; // Store undo actions
-        const maxUndoSteps = 50; // Maximum number of undo steps
+        const blackLines = [];
+        const undoStack = [];
+        const maxUndoSteps = 50;
+
+        let isDrawing = false;
+        let startX, startY;
 
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
+            drawAllLines();
         }
+
+        function drawAllLines(currentX, currentY) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (ghostCheckbox.checked) {
+                drawGhostLines();
+            }
+
+            blackLines.forEach(line => {
+                drawLine(line.startX, line.startY, line.endX, line.endY, 'black', 2);
+            });
+
+            if (isDrawing && currentX && currentY) {
+                drawLine(startX, startY, currentX, currentY, 'black', 2);
+            }
+        }
+
+        function drawGhostLines() {
+            const greyDotX = canvas.width * 0.5;
+            const greyDotY = canvas.height * 0.3;
+
+            blackLines.forEach(line => {
+                drawLine(line.startX, line.startY, greyDotX, greyDotY, 'cyan', 0.5);
+                drawLine(line.endX, line.endY, greyDotX, greyDotY, 'cyan', 0.5);
+            });
+        }
+
+        function drawLine(startX, startY, endX, endY, color, width) {
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(endX, endY);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.stroke();
+        }
+
+        function undo() {
+            if (undoStack.length > 0) {
+                const action = undoStack.pop();
+                if (action === 'add') {
+                    blackLines.pop();
+                }
+                drawAllLines();
+            }
+        }
+
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
-
-        let isDrawing = false;
-        let startX, startY;
 
         canvas.addEventListener('mousedown', (e) => {
             isDrawing = true;
@@ -104,59 +155,16 @@
             drawAllLines();
         });
 
-        function drawAllLines(currentX, currentY) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            if (ghostCheckbox.checked) {
-                drawGhostLines();
-            }
-
-            blackLines.forEach(line => {
-                drawLine(line.startX, line.startY, line.endX, line.endY, 'black', 2);
-            });
-
-            if (isDrawing && currentX && currentY) {
-                drawLine(startX, startY, currentX, currentY, 'black', 2);
-            }
-        }
-
-        function drawGhostLines() {
-            const greyDotX = canvas.width * 0.5;  // 50% of canvas width
-            const greyDotY = canvas.height * 0.3; // 30% of canvas height
-
-            blackLines.forEach(line => {
-                drawLine(line.startX, line.startY, greyDotX, greyDotY, 'cyan', 0.5);
-                drawLine(line.endX, line.endY, greyDotX, greyDotY, 'cyan', 0.5);
-            });
-        }
-
-        function drawLine(startX, startY, endX, endY, color, width) {
-            ctx.beginPath();
-            ctx.moveTo(startX, startY);
-            ctx.lineTo(endX, endY);
-            ctx.strokeStyle = color;
-            ctx.lineWidth = width;
-            ctx.stroke();
-        }
-
         ghostCheckbox.addEventListener('change', drawAllLines);
 
-        // Undo functionality
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.key === 'z') {
                 undo();
             }
         });
 
-        function undo() {
-            if (undoStack.length > 0) {
-                const action = undoStack.pop();
-                if (action === 'add') {
-                    blackLines.pop();
-                }
-                drawAllLines();
-            }
-        }
+        document.querySelector('.grey-line').addEventListener('mousedown', (e) => e.stopPropagation());
+        document.querySelector('.grey-dot').addEventListener('mousedown', (e) => e.stopPropagation());
     </script>
 </body>
 </html>
