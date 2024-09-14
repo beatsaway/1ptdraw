@@ -29,7 +29,7 @@
             position: absolute;
             top: 30%;
             left: 50%;
-            width: 10px;
+            width: 5px;
             height: 10px;
             background-color: #D3D3D3;
             border-radius: 50%;
@@ -94,7 +94,7 @@
 
             // Draw straight lines
             blackLines.forEach(line => {
-                drawLine(line.startX, line.startY, line.endX, line.endY, 'black', 2);
+                drawLine(line.startX, line.startY, line.endX, line.endY, 'black', 1);
             });
 
             // Draw freehand paths
@@ -162,7 +162,7 @@
         canvas.addEventListener('mousemove', (e) => {
             if (isDrawing) {
                 drawAllLines();
-                drawLine(startX, startY, e.clientX, e.clientY, 'black', 2);
+                drawLine(startX, startY, e.clientX, e.clientY, 'black', 1);
             } else if (isFreehandDrawing) {
                 currentPath.push({x: e.clientX, y: e.clientY});
                 drawAllLines();
