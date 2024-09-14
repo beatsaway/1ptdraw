@@ -64,18 +64,20 @@
     </div>
 
     <script>
-        // Move all variable declarations to the top
         const canvas = document.getElementById('drawCanvas');
         const ctx = canvas.getContext('2d');
         const ghostCheckbox = document.getElementById('ghostCheckbox');
         const greyDot = document.getElementById('greyDot');
 
         const blackLines = [];
+        const freehandPaths = [];
         const undoStack = [];
         const maxUndoSteps = 50;
 
         let isDrawing = false;
+        let isFreehandDrawing = false;
         let startX, startY;
+        let currentPath = [];
 
         function resizeCanvas() {
             canvas.width = window.innerWidth;
@@ -83,20 +85,22 @@
             drawAllLines();
         }
 
-        function drawAllLines(currentX, currentY) {
+        function drawAllLines() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             if (ghostCheckbox.checked) {
                 drawGhostLines();
             }
 
+            // Draw straight lines
             blackLines.forEach(line => {
                 drawLine(line.startX, line.startY, line.endX, line.endY, 'black', 2);
             });
 
-            if (isDrawing && currentX && currentY) {
-                drawLine(startX, startY, currentX, currentY, 'black', 2);
-            }
+            // Draw freehand paths
+            freehandPaths.forEach(path => {
+                drawFreehandPath(path);
+            });
         }
 
         function drawGhostLines() {
@@ -118,11 +122,24 @@
             ctx.stroke();
         }
 
+        function drawFreehandPath(path) {
+            ctx.beginPath();
+            ctx.moveTo(path[0].x, path[0].y);
+            for (let i = 1; i < path.length; i++) {
+                ctx.lineTo(path[i].x, path[i].y);
+            }
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
         function undo() {
             if (undoStack.length > 0) {
                 const action = undoStack.pop();
                 if (action === 'add') {
                     blackLines.pop();
+                } else if (action === 'freehand') {
+                    freehandPaths.pop();
                 }
                 drawAllLines();
             }
@@ -132,27 +149,45 @@
         resizeCanvas();
 
         canvas.addEventListener('mousedown', (e) => {
-            isDrawing = true;
-            startX = e.clientX;
-            startY = e.clientY;
+            if (e.button === 0) { // Left click
+                isDrawing = true;
+                startX = e.clientX;
+                startY = e.clientY;
+            } else if (e.button === 2) { // Right click
+                isFreehandDrawing = true;
+                currentPath = [{x: e.clientX, y: e.clientY}];
+            }
         });
 
         canvas.addEventListener('mousemove', (e) => {
-            if (!isDrawing) return;
-            drawAllLines(e.clientX, e.clientY);
+            if (isDrawing) {
+                drawAllLines();
+                drawLine(startX, startY, e.clientX, e.clientY, 'black', 2);
+            } else if (isFreehandDrawing) {
+                currentPath.push({x: e.clientX, y: e.clientY});
+                drawAllLines();
+                drawFreehandPath(currentPath);
+            }
         });
 
         canvas.addEventListener('mouseup', (e) => {
-            if (!isDrawing) return;
-            isDrawing = false;
-            const endX = e.clientX;
-            const endY = e.clientY;
-            blackLines.push({ startX, startY, endX, endY });
-            undoStack.push('add');
+            if (isDrawing) {
+                isDrawing = false;
+                blackLines.push({ startX, startY, endX: e.clientX, endY: e.clientY });
+                undoStack.push('add');
+            } else if (isFreehandDrawing) {
+                isFreehandDrawing = false;
+                freehandPaths.push(currentPath);
+                undoStack.push('freehand');
+            }
             if (undoStack.length > maxUndoSteps) {
                 undoStack.shift();
             }
             drawAllLines();
+        });
+
+        canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault(); // Prevent the context menu from appearing
         });
 
         ghostCheckbox.addEventListener('change', drawAllLines);
