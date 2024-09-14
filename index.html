@@ -162,7 +162,7 @@
         canvas.addEventListener('mousemove', (e) => {
             if (isDrawing) {
                 drawAllLines();
-                drawLine(startX, startY, e.clientX, e.clientY, 'black', 1);
+                drawLine(startX, startY, e.clientX, e.clientY, 'black', 1.5);
             } else if (isFreehandDrawing) {
                 currentPath.push({x: e.clientX, y: e.clientY});
                 drawAllLines();
